@@ -51,6 +51,7 @@ jobs:
             echo "Latest upstream version: ${VERSION}"
             echo "Updating to latest version..."
 
+            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "NEW_VERSION=1" >> $GITHUB_OUTPUT
 
             curl -X POST \
