@@ -70,6 +70,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Create Tag
+      env:
+        EMAIL: ${{ secrets.EMAIL }}
       run: |
         git config --global user.name "Erik Thomsen"
         git config --global user.email ${EMAIL}
