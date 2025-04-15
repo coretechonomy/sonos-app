@@ -65,6 +65,7 @@ jobs:
         fi
 
   build:
+    needs: version-tracker
     if: needs.version-tracker.outputs.NEW_VERSION == '1'
     timeout-minutes: 60
     runs-on: ubuntu-latest
