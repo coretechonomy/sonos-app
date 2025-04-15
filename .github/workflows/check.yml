@@ -8,6 +8,10 @@ jobs:
   version-tracker:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.VERSION }}
+      download_url: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
+      new_version: ${{ steps.create-tag.outputs.NEW_VERSION }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -30,9 +34,6 @@ jobs:
 
         echo VERSION=$(echo "$filename" | grep -oE '[0-9]+\.[0-9]+-[0-9]+') >> $GITHUB_ENV
         echo DOWNLOAD_URL=$final_url >> $GITHUB_ENV
-      outputs:
-        VERSION: ${{ env.VERSION }}
-        DOWNLOAD_URL: ${{ env.DOWNLOAD_URL }}
 
     - name: Create tag and send notification
       id: create-tag
@@ -65,20 +66,19 @@ jobs:
         else
             echo "No updates available..."
         fi
-      outputs:
-        NEW_VERSION: ${{ env.NEW_VERSION }}
 
   build:
     needs: version-tracker
-    if: ${{ needs.check-version.outputs.NEW_VERSION == '1' }}
+    # if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ needs.check-version.outputs.version }}
-      DOWNLOAD_URL: ${{ needs.check-version.outputs.download_url }}
+      VERSION: ${{ needs.version-tracker.outputs.version }}
     steps:
     - name: Download SETUP_EXE
       run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+      env:
+        DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
 
     - name: Build Docker image
       run: |
