@@ -69,6 +69,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
+      NEW_VERSION: ${{ needs.version-tracker.outputs.NEW_VERSION }}
       DOWNLOAD_URL: ${{ needs.check-version.outputs.DOWNLOAD_URL }}
     steps:
     - name: Download SETUP_EXE
