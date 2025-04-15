@@ -74,7 +74,7 @@ jobs:
       run: |
         git config --global user.name "Erik Thomsen"
         git config --global user.email ${EMAIL}
-        TAG_NAME="v${needs.version-tracker.outputs.VERSION}"
+        TAG_NAME="v${{ needs.version-tracker.outputs.VERSION }}"
         git tag -a $TAG_NAME -m "Release $TAG_NAME"
         git push origin $TAG_NAME
 
