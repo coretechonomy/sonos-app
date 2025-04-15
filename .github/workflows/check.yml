@@ -72,12 +72,11 @@ jobs:
     # if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    env:
-      VERSION: ${{ needs.check-version.outputs.version }}
-      DOWNLOAD_URL: ${{ needs.check-version.outputs.download_url }}
     steps:
     - name: Download SETUP_EXE
       run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+      env:
+        DOWNLOAD_URL: ${{ needs.check-version.outputs.download_url }}
 
     - name: Build Docker image
       run: |
@@ -107,3 +106,5 @@ jobs:
         files: ${{ vars.MSI_FILE }}.gpg
         body: |
           Version: v${{ env.VERSION }}
+      env:
+        VERSION: ${{ needs.check-version.outputs.version }}
