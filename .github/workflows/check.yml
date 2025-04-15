@@ -1,0 +1,104 @@
+name: Version Tracker
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '*/30 * * * *' # Runs every half hour
+  workflow_dispatch:
+jobs:
+  version-tracker:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.check-version.outputs.VERSION }}
+      DOWNLOAD_URL: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
+      NEW_VERSION: ${{ steps.create-tag.outputs.NEW_VERSION }}
+    steps:
+    - uses: actions/checkout@v4
+        
+    - name: Check for updates
+      id: check-version
+      run: |
+        url="https://www.sonos.com/redir/controller_software_pc2"
+
+        filename=$(curl -sI -L "$url" | \
+          grep -i 'content-disposition' | \
+          sed -E 's/.*filename="?([^\";]+)"?.*/\1/')
+
+        if [ -z "$filename" ]; then
+          final_url=$(curl -s -L -o /dev/null -w '%{url_effective}' "$url")
+          filename=$(basename "$final_url") 
+        fi
+
+        echo VERSION=$(echo "$filename" | grep -oE '[0-9]+\.[0-9]+-[0-9]+') >> $GITHUB_ENV
+        echo DOWNLOAD_URL=$final_url >> $GITHUB_ENV
+
+    - name: Create tag and send notification
+      id: create-tag
+      env:
+        EMAIL: ${{ secrets.EMAIL }}
+        GOTIFY_SERVER: ${{ secrets.GOTIFY_SERVER }}
+        GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
+      run: |
+        LOCAL_VER=$(git -c 'versionsort.suffix=-' \
+            ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/coretechonomy/sonos-app.git \
+            | tail --lines=1 \
+            | cut --delimiter='/' --fields=3)
+
+        if [[ ${LOCAL_VER} != "v${VERSION}" ]]; then
+            echo "Local version: ${LOCAL_VER}"
+            echo "Latest upstream version: ${VERSION}"
+            echo "Updating to latest version..."
+            git config --global user.name "Erik Thomsen"
+            git config --global user.email ${EMAIL}
+            TAG_NAME="v${VERSION}"
+            git tag -a $TAG_NAME -m "Release $TAG_NAME"
+            git push origin $TAG_NAME
+            
+            echo NEW_VERSION=1 >> $GITHUB_ENV
+
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -d '{ "message": "Sonos App\nNew Version: v'${VERSION}'", "title": "Version Tracker" }' \
+              "https://${GOTIFY_SERVER}/message?token=${GOTIFY_TOKEN}"
+        else
+            echo "No updates available..."
+        fi
+
+  build:
+    if: ${{ env.NEW_VERSION == '1' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      DOWNLOAD_URL: ${{ needs.check-version.outputs.DOWNLOAD_URL }}
+    steps:
+    - name: Download SETUP_EXE
+      run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+
+    - name: Build Docker image
+      run: |
+        docker build \
+          --build-arg SETUP_EXE="${{ vars.SETUP_EXE }}" \
+          --build-arg MSI_FILE="${{ vars.MSI_FILE }}" \
+          -t etechonomy/docker-wine .
+      env:
+        SETUP_EXE: ${{ vars.SETUP_EXE }}
+        MSI_FILE: ${{ vars.MSI_FILE }}
+
+    - name: Run Docker container
+      run: docker run --name docker-wine --rm -e SETUP_EXE="${{ vars.SETUP_EXE }}" -e MSI_FILE="${{ vars.MSI_FILE }}" -v $(pwd):/tmp/etechonomy etechonomy/docker-wine
+      env:
+        SETUP_EXE: ${{ vars.SETUP_EXE }}
+        MSI_FILE: ${{ vars.MSI_FILE }}
+
+    - name: Encrypt MSI File
+      run: gpg --batch -c --passphrase '${{ secrets.PASSPHRASE }}' ${{ vars.MSI_FILE }}
+      env:
+        PASSPHRASE: ${{ secrets.PASSPHRASE }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{ vars.MSI_FILE }}.gpg
+        body: |
+          Version: v${{ env.VERSION }}
