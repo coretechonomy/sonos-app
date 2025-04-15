@@ -11,11 +11,13 @@ jobs:
     outputs:
       VERSION: ${{ steps.check-version.outputs.VERSION }}
       DOWNLOAD_URL: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
+      NEW_VERSION: ${{ steps.create-tag.outputs.NEW_VERSION }}
     steps:
     - uses: actions/checkout@v4
       with:
         token: ${{ secrets.GH_PAT }} # Required due to: https://github.com/orgs/community/discussions/25702
 
+        
     - name: Check for updates
       id: check-version
       run: |
@@ -55,6 +57,8 @@ jobs:
             git tag -a $TAG_NAME -m "Release $TAG_NAME"
             git push origin $TAG_NAME
 
+            echo NEW_VERSION=1 >> $GITHUB_ENV
+
             curl -X POST \
               -H "Content-Type: application/json" \
               -d '{ "message": "Sonos App\nNew Version: v'${VERSION}'", "title": "Version Tracker" }' \
@@ -65,12 +69,13 @@ jobs:
 
   build:
     needs: version-tracker
-    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ needs.create-tag.outputs.NEW_VERSION == '1' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.check-version.outputs.VERSION }}
       DOWNLOAD_URL: ${{ needs.check-version.outputs.DOWNLOAD_URL }}
+      NEW_VERSION: ${{ needs.create-tag.outputs.NEW_VERSION }}
     steps:
     - name: Download SETUP_EXE
       run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
