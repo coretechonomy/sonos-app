@@ -9,9 +9,9 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     outputs:
-      VERSION: ${{ steps.check-version.outputs.VERSION }}
-      DOWNLOAD_URL: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
-      NEW_VERSION: ${{ steps.create-tag.outputs.NEW_VERSION }}
+      version: ${{ steps.check-version.outputs.VERSION }}
+      download_url: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
+      new_version: ${{ steps.create-tag.outputs.NEW_VERSION }}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -73,8 +73,8 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ needs.check-version.outputs.VERSION }}
-      DOWNLOAD_URL: ${{ needs.check-version.outputs.DOWNLOAD_URL }}
+      VERSION: ${{ needs.check-version.outputs.version }}
+      DOWNLOAD_URL: ${{ needs.check-version.outputs.download_url }}
     steps:
     - name: Download SETUP_EXE
       run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
