@@ -69,13 +69,12 @@ jobs:
 
   build:
     needs: version-tracker
-    if: ${{ needs.create-tag.outputs.NEW_VERSION == '1' }}
+    # if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.check-version.outputs.VERSION }}
       DOWNLOAD_URL: ${{ needs.check-version.outputs.DOWNLOAD_URL }}
-      NEW_VERSION: ${{ needs.create-tag.outputs.NEW_VERSION }}
     steps:
     - name: Download SETUP_EXE
       run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
