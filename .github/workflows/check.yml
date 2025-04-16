@@ -101,8 +101,8 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
       with:
+        tag_name: "v${{ needs.version-tracker.outputs.VERSION }}"
         files: ${{ vars.MSI_FILE }}.gpg
         body: |
           Version: v${{ needs.version-tracker.outputs.VERSION }}
