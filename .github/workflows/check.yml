@@ -81,9 +81,20 @@ jobs:
       env:
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
 
+    - name: Cache Docker Layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-docker-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
+
     - name: Build Docker image
       run: |
-        docker build -t etechonomy/docker-wine .
+        docker build \
+        --cache-from=type=local,src=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        -t etechonomy/docker-wine:latest .
       env:
         SETUP_EXE: ${{ vars.SETUP_EXE }}
         MSI_FILE: ${{ vars.MSI_FILE }}
