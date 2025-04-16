@@ -89,11 +89,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-docker-
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
     - name: Build Docker image
       run: |
-        docker build \
+        docker buildx build \
+        --builder default \
         --cache-from=type=local,src=/tmp/.buildx-cache \
-        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
         -t etechonomy/docker-wine:latest .
       env:
         SETUP_EXE: ${{ vars.SETUP_EXE }}
