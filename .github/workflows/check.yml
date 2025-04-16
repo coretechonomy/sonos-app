@@ -77,7 +77,7 @@ jobs:
     - name: Download SETUP_EXE
       run: |
         curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
-        ls -ltrh
+        ls -ltrh ${{ vars.SETUP_EXE }}
       env:
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
 
