@@ -81,33 +81,9 @@ jobs:
       env:
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
 
-    - name: Cache Docker Layers
-      uses: actions/cache@v3
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-docker-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-docker-
-
-    - name: Enable containerd
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository -y ppa:containerd/containerd
-        sudo apt-get install -y containerd
-        sudo systemctl start containerd
-        sudo systemctl enable containerd
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
     - name: Build Docker image
       run: |
-        docker buildx build \
-        --builder default \
-        --cache-from=type=local,src=/tmp/.buildx-cache \
-        --cache-to=type=local,dest=/tmp/.buildx-cache,mode=max \
-        -t etechonomy/docker-wine:latest .
+        docker build -t etechonomy/docker-wine .
       env:
         SETUP_EXE: ${{ vars.SETUP_EXE }}
         MSI_FILE: ${{ vars.MSI_FILE }}
