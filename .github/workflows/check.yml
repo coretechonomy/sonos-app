@@ -101,7 +101,7 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/v')
+      if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
       with:
         files: ${{ vars.MSI_FILE }}.gpg
         body: |
