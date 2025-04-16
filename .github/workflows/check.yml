@@ -11,7 +11,7 @@ jobs:
     outputs:
       VERSION: ${{ steps.check-version.outputs.VERSION }}
       DOWNLOAD_URL: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
-      NEW_VERSION: ${{ steps.compare-versions.outputs.NEW_VERSION }}
+      NEW_VERSION: ${{ steps.create-tag.outputs.NEW_VERSION }}
     steps:
     - uses: actions/checkout@v4
         
@@ -35,9 +35,10 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "DOWNLOAD_URL=$final_url" >> $GITHUB_OUTPUT
 
-    - name: Check for updates and send notification
-      id: compare-versions
+    - name: Create tag and send notification
+      id: create-tag
       env:
+        EMAIL: ${{ secrets.EMAIL }}
         GOTIFY_SERVER: ${{ secrets.GOTIFY_SERVER }}
         GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
       run: |
@@ -50,8 +51,12 @@ jobs:
             echo "Local version: ${LOCAL_VER}"
             echo "Latest upstream version: ${VERSION}"
             echo "Updating to latest version..."
+            git config --global user.name "Erik Thomsen"
+            git config --global user.email ${EMAIL}
+            TAG_NAME="v${VERSION}"
+            git tag -a $TAG_NAME -m "Release $TAG_NAME"
+            git push origin $TAG_NAME
 
-            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "NEW_VERSION=1" >> $GITHUB_OUTPUT
 
             curl -X POST \
@@ -61,52 +66,3 @@ jobs:
         else
             echo "No updates available..."
         fi
-
-  build:
-    needs: version-tracker
-    if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Create Tag
-      env:
-        EMAIL: ${{ secrets.EMAIL }}
-      run: |
-        git config --global user.name "Erik Thomsen"
-        git config --global user.email ${EMAIL}
-        TAG_NAME="v${{ needs.version-tracker.outputs.VERSION }}"
-        git tag -a $TAG_NAME -m "Release $TAG_NAME"
-        git push origin $TAG_NAME
-
-    - name: Download SETUP_EXE
-      run: curl -L ${{ needs.version-tracker.outputs.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
-
-    - name: Build Docker image
-      run: |
-        docker build \
-          --build-arg SETUP_EXE="${{ vars.SETUP_EXE }}" \
-          --build-arg MSI_FILE="${{ vars.MSI_FILE }}" \
-          -t etechonomy/docker-wine .
-      env:
-        SETUP_EXE: ${{ vars.SETUP_EXE }}
-        MSI_FILE: ${{ vars.MSI_FILE }}
-
-    - name: Run Docker container
-      run: docker run --name docker-wine --rm -e SETUP_EXE="${{ vars.SETUP_EXE }}" -e MSI_FILE="${{ vars.MSI_FILE }}" -v $(pwd):/tmp/etechonomy etechonomy/docker-wine
-      env:
-        SETUP_EXE: ${{ vars.SETUP_EXE }}
-        MSI_FILE: ${{ vars.MSI_FILE }}
-
-    - name: Encrypt MSI File
-      run: gpg --batch -c --passphrase '${{ secrets.PASSPHRASE }}' ${{ vars.MSI_FILE }}
-      env:
-        PASSPHRASE: ${{ secrets.PASSPHRASE }}
-
-    - name: Release
-      uses: softprops/action-gh-release@v2
-      if: github.ref_type == 'tag'
-      with:
-        files: ${{ vars.MSI_FILE }}.gpg
-        body: |
-          Version: v${{ needs.version-tracker.outputs.VERSION }}
