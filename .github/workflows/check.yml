@@ -75,7 +75,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Download SETUP_EXE
-      run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+      run: |
+        curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+        ls -ltrh
       env:
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
 
