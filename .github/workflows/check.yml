@@ -66,3 +66,44 @@ jobs:
         else
             echo "No updates available..."
         fi
+
+  build:
+    needs: version-tracker
+    if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download SETUP_EXE
+      run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
+      env:
+        DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
+
+    - name: Build Docker image
+      run: |
+        docker build \
+          --build-arg SETUP_EXE="${{ vars.SETUP_EXE }}" \
+          --build-arg MSI_FILE="${{ vars.MSI_FILE }}" \
+          -t etechonomy/docker-wine .
+      env:
+        SETUP_EXE: ${{ vars.SETUP_EXE }}
+        MSI_FILE: ${{ vars.MSI_FILE }}
+
+    - name: Run Docker container
+      run: docker run --name docker-wine --rm -e SETUP_EXE="${{ vars.SETUP_EXE }}" -e MSI_FILE="${{ vars.MSI_FILE }}" -v $(pwd):/tmp/etechonomy etechonomy/docker-wine
+      env:
+        SETUP_EXE: ${{ vars.SETUP_EXE }}
+        MSI_FILE: ${{ vars.MSI_FILE }}
+
+    - name: Encrypt MSI File
+      run: gpg --batch -c --passphrase '${{ secrets.PASSPHRASE }}' ${{ vars.MSI_FILE }}
+      env:
+        PASSPHRASE: ${{ secrets.PASSPHRASE }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        files: ${{ vars.MSI_FILE }}.gpg
+        body: |
+          Version: v${{ needs.version-tracker.outputs.VERSION }}
