@@ -74,10 +74,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
     - name: Download SETUP_EXE
-      run: curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
-      env:
-        DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
+      run: curl -L ${{ needs.version-tracker.outputs.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
 
     - name: Build Docker image
       run: |
