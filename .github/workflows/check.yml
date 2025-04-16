@@ -32,7 +32,7 @@ jobs:
         echo VERSION=$(echo "$filename" | grep -oE '[0-9]+\.[0-9]+-[0-9]+') >> $GITHUB_ENV
         echo DOWNLOAD_URL=$final_url >> $GITHUB_ENV
 
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "VERSION=$(echo "$filename" | grep -oE '[0-9]+\.[0-9]+-[0-9]+')" >> $GITHUB_OUTPUT
         echo "DOWNLOAD_URL=$final_url" >> $GITHUB_OUTPUT
 
     - name: Create tag and send notification
@@ -79,7 +79,7 @@ jobs:
         curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
         ls -ltrh ${{ vars.SETUP_EXE }}
       env:
-        DOWNLOAD_URL: ${{ needs.version-tracker.outputs.download_url }}
+        DOWNLOAD_URL: ${{ needs.version-tracker.outputs.DOWNLOAD_URL }}
 
     - name: Build Docker image
       run: |
@@ -102,7 +102,9 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: "v${{ needs.version-tracker.outputs.VERSION }}"
+        tag_name: "v${{ env.VERSION }}"
         files: ${{ vars.MSI_FILE }}.gpg
         body: |
-          Version: v${{ needs.version-tracker.outputs.VERSION }}
+          Version: v${{ env.VERSION }}
+      env:
+        VERSION: ${{ needs.version-tracker.outputs.VERSION }}
