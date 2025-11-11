@@ -77,8 +77,8 @@ jobs:
 
     - name: Populate nuspec variables with envsubst
       run: |
-        envsubst $TAG_NAME < chocolatey/sonos-app.nuspec > chocolatey/sonos-app.nuspec.out
-        envsubst $DOWNLOAD_URL < chocolatey/tools/chocolateyinstall.ps1 > chocolatey/tools/chocolateyinstall.ps1.out
+        envsubst '$TAG_NAME' < chocolatey/sonos-app.nuspec > chocolatey/sonos-app.nuspec.out
+        envsubst '$DOWNLOAD_URL' < chocolatey/tools/chocolateyinstall.ps1 > chocolatey/tools/chocolateyinstall.ps1.out
         mv chocolatey/sonos-app.nuspec.out chocolatey/sonos-app.nuspec
         mv chocolatey/tools/chocolateyinstall.ps1.out chocolatey/tools/chocolateyinstall.ps1
       env:
