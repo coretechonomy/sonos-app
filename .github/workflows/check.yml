@@ -47,13 +47,13 @@ jobs:
             | tail --lines=1 \
             | cut --delimiter='/' --fields=3)
 
-        if [[ ${LOCAL_VER} != "v${VERSION}" ]]; then
+        if [[ ${LOCAL_VER} != "${VERSION}" ]]; then
             echo "Local version: ${LOCAL_VER}"
             echo "Latest upstream version: ${VERSION}"
             echo "Updating to latest version..."
             git config --global user.name "Erik Thomsen"
             git config --global user.email ${EMAIL}
-            TAG_NAME="v${VERSION}"
+            TAG_NAME="${VERSION}"
             git tag -a $TAG_NAME -m "Release $TAG_NAME"
             git push origin $TAG_NAME
 
@@ -77,13 +77,12 @@ jobs:
 
     - name: Populate nuspec variables with envsubst
       run: |
-        export TAG_NAME="${{ github.ref_name }}"
-        envsubst '$TAG_NAME' < chocolatey/sonos-app.nuspec > chocolatey/sonos-app.nuspec.out
-        envsubst '$DOWNLOAD_URL' < chocolatey/tools/chocolateyinstall.ps1 > chocolatey/tools/chocolateyinstall.ps1.out
+        envsubst ${{ env.$TAG_NAME }} < chocolatey/sonos-app.nuspec > chocolatey/sonos-app.nuspec.out
+        envsubst ${{ env.$DOWNLOAD_URL }} < chocolatey/tools/chocolateyinstall.ps1 > chocolatey/tools/chocolateyinstall.ps1.out
         mv chocolatey/sonos-app.nuspec.out chocolatey/sonos-app.nuspec
         mv chocolatey/tools/chocolateyinstall.ps1.out chocolatey/tools/chocolateyinstall.ps1
       env:
-        TAG_NAME: ${{ github.ref_name }}
+        TAG_NAME: ${{ needs.version-tracker.outputs.VERSION }}
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.DOWNLOAD_URL }}
 
     - name: Pack Chocolatey Package
@@ -95,10 +94,10 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        tag_name: "v${{ env.VERSION }}"
+        tag_name: "${{ env.VERSION }}"
         files: |
           chocolatey/*.nupkg
         body: |
-          Version: v${{ env.VERSION }}
+          Version: ${{ env.VERSION }}
       env:
         VERSION: ${{ needs.version-tracker.outputs.VERSION }}
