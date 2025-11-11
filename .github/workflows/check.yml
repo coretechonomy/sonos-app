@@ -57,7 +57,7 @@ jobs:
             git tag -a $TAG_NAME -m "Release $TAG_NAME"
             git push origin $TAG_NAME
 
-            echo "NEW_VERSION=1" >> $GITHUB_OUTPUT
+            echo "NEW_VERSION=true" >> $GITHUB_OUTPUT
 
             curl -X POST \
               -H "Content-Type: application/json" \
@@ -69,41 +69,35 @@ jobs:
 
   build:
     needs: version-tracker
-    if: ${{ needs.version-tracker.outputs.NEW_VERSION == '1' }}
+    if: ${{ needs.version-tracker.outputs.NEW_VERSION == true }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Download SETUP_EXE
+
+    - name: Populate nuspec variables with envsubst
       run: |
-        curl -L ${{ env.DOWNLOAD_URL }} -o ${{ vars.SETUP_EXE }}
-        ls -ltrh ${{ vars.SETUP_EXE }}
+        export TAG_NAME="${{ github.ref_name }}"
+        envsubst '$TAG_NAME' < chocolatey/sonos-app.nuspec > chocolatey/sonos-app.nuspec.out
+        envsubst '$DOWNLOAD_URL' < chocolatey/tools/chocolateyinstall.ps1 > chocolatey/tools/chocolateyinstall.ps1.out
+        mv chocolatey/sonos-app.nuspec.out chocolatey/sonos-app.nuspec
+        mv chocolatey/tools/chocolateyinstall.ps1.out chocolatey/tools/chocolateyinstall.ps1
       env:
+        TAG_NAME: ${{ github.ref_name }}
         DOWNLOAD_URL: ${{ needs.version-tracker.outputs.DOWNLOAD_URL }}
 
-    - name: Build Docker image
+    - name: Pack Chocolatey Package
       run: |
-        docker build -t etechonomy/docker-wine .
-      env:
-        SETUP_EXE: ${{ vars.SETUP_EXE }}
-        MSI_FILE: ${{ vars.MSI_FILE }}
-
-    - name: Run Docker container
-      run: docker run --name docker-wine --rm -e SETUP_EXE="${{ vars.SETUP_EXE }}" -e MSI_FILE="${{ vars.MSI_FILE }}" -v $(pwd):/tmp/etechonomy etechonomy/docker-wine
-      env:
-        SETUP_EXE: ${{ vars.SETUP_EXE }}
-        MSI_FILE: ${{ vars.MSI_FILE }}
-
-    - name: Encrypt MSI File
-      run: gpg --batch -c --passphrase '${{ secrets.PASSPHRASE }}' ${{ vars.MSI_FILE }}
-      env:
-        PASSPHRASE: ${{ secrets.PASSPHRASE }}
+        cd chocolatey
+        docker run --rm -v $PWD:/root --entrypoint bash docker.io/chocolatey/choco -c 'choco pack'
 
     - name: Release
       uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
       with:
         tag_name: "v${{ env.VERSION }}"
-        files: ${{ vars.MSI_FILE }}.gpg
+        files: |
+          chocolatey/*.nupkg
         body: |
           Version: v${{ env.VERSION }}
       env:
