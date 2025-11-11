@@ -69,7 +69,7 @@ jobs:
 
   build:
     needs: version-tracker
-    if: ${{ needs.version-tracker.outputs.NEW_VERSION == "true" }}
+    if: ${{ needs.version-tracker.outputs.NEW_VERSION == 'true' }}
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
