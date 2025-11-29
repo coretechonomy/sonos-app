@@ -13,7 +13,7 @@ jobs:
       DOWNLOAD_URL: ${{ steps.check-version.outputs.DOWNLOAD_URL }}
       NEW_VERSION: ${{ steps.create-tag.outputs.NEW_VERSION }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
         
     - name: Check for updates
       id: check-version
@@ -73,7 +73,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Populate nuspec variables with envsubst
       run: |
